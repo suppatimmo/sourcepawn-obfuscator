@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zxx" xmlns:th="http://www.thymeleaf.org">
+<html lang="zxx" xmlns:th="http://www.thymeleaf.org" xmlns:form="http://www.w3.org/1999/xhtml">
 
 <head>
     <meta charset="UTF-8">
@@ -15,36 +15,27 @@
 </head>
 
 <body>
-    <header class="header-section">
-        <div class="header-top">
-            <div class="container">
-                <div class="ht-left">
-<!--                    <div class="mail-service">-->
-<!--                        <i class=" fa fa-envelope"></i>-->
-<!--                        smplugins@gmail.com-->
-<!--                    </div>-->
-                </div>
-
-<!--                <div sec:authorize="isAuthenticated()" class="ht-right">-->
-<!--                    <a class="login-panel" th:href="@{/profile}" th:text="${userName}"><i class="fa fa-user"></i>Profil</a>-->
-<!--                    <a href="./logout" th:href="@{/logout}" class="login-panel"><i class="fas fa-sign-out-alt"></i></i>Wyloguj</a>-->
-<!--                </div>-->
-<!--                <div sec:authorize="isAnonymous()" class="ht-right">-->
-<!--                    <a href="./login.html" th:href="@{/login}" class="login-panel"><i class="fa fa-user"></i>Zaloguj się</a>-->
-<!--                </div>-->
+<div class="container-fluid">
+    <div class="row spad">
+        <form style="display: inline-flex; width:100%" action="#" th:action="@{/index}" method="post">
+            <div class="col-lg-5">
+                <p> Code to encode: <textarea style="width: 100%; height:500px;" th:text="${codeToEncode}" type="text" name="codeToEncode"
+                                              id="codeToEncode"></textarea></p>
             </div>
-        </div>
-    </header>
-    <div class="form-group encoder-form">
-        <label for="code-source">Paste your code here.</label>
-        <textarea class="form-control" id="code-source" rows="3"></textarea>
+            <div class="col-lg-2 text-center">
+                <p><input style="position:relative; top:10%" type="submit" value="Submit"/></p>
+                <p><input style="position:relative; top:10%" type="reset" value="Reset"/></p> <!--// js clearing needed -->
+            </div>
+            <div class="col-lg-5">
+                <p> Encoded code: <textarea style="width: 100%; height:500px;" th:text="${encodedCode}" type="text" name="encodedCode"
+                                            id="encodedCode"></textarea></p>
+            </div>
+
+        </form>
     </div>
-    <button type="submit" class="encode">ENCODE SOURCE</button>
-    <div class="form-group encoder-form">
-        <label for="code-source">Paste your code here.</label>
-        <textarea class="form-control" id="code-source" rows="3"></textarea>
-    </div>
-    <script src="js/bootstrap.min.js"></script>
-    <script src="js/main.js"></script>
+</div>
+
+<script src="js/bootstrap.min.js"></script>
+<script src="js/main.js"></script>
 </body>
 </html>
