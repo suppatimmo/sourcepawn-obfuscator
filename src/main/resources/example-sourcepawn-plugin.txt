@@ -1,0 +1,193 @@
+#pragma semicolon 1
+
+#include <sourcemod>
+#include <sdktools>
+#include <cstrike>
+#include <sdkhooks>
+
+#pragma newdecls required
+
+#define GRAB_DISTANCE 80.0
+
+//HITMAN VARIABLES
+
+int g_iGrabbed[MAXPLAYERS + 1] =  { INVALID_ENT_REFERENCE, ... };
+bool g_bIsHoldingE[MAXPLAYERS + 1];
+ArrayList Ragdolls;
+
+public Plugin myinfo =
+{
+    name = "Targanie zwlok",
+    author = "SUPER TIMOR",
+    description = "",
+    version = "",
+    url = ""
+};
+
+public void OnPluginStart()
+{
+    HookEvent("player_death", Event_PlayerDeath, EventHookMode_Pre);
+    HookEvent("round_end", Event_RoundEnd);
+    RegAdminCmd("sm_respawn", CMD_RespawnPlayer, ADMFLAG_KICK);
+    RegAdminCmd("sm_1up", CMD_RespawnPlayer, ADMFLAG_KICK);
+    Ragdolls = new ArrayList();
+    for (int i = 1; i <= MaxClients; i++) {
+        if(IsClientInGame(i))
+            OnClientPutInServer(i);
+    }
+    LoadTranslations("common.phrases");
+}
+
+public Action Event_RoundEnd(Event event, const char[] name, bool dontBroadcast) {
+    ResetVariables();
+    Ragdolls.Clear();
+}
+
+public Action Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
+{
+    int client = GetClientOfUserId(event.GetInt("userid"));
+    g_iGrabbed[client] = INVALID_ENT_REFERENCE;
+    char model_name[128];
+    if(IsValidClient(client))
+    {
+        GetClientModel(client, model_name, sizeof(model_name));
+        if(StrContains(model_name, "chicken") != -1)
+            return Plugin_Continue;
+
+        float pos[3], angles[3];
+        GetClientAbsAngles(client, angles);
+        GetClientAbsOrigin(client, pos);
+        char modelName[PLATFORM_MAX_PATH], clientName[MAX_NAME_LENGTH];
+        GetClientModel(client, modelName, sizeof(modelName));
+        GetClientName(client, clientName, sizeof(clientName));
+        int ragdoll = GetEntPropEnt(client, Prop_Send, "m_hRagdoll");
+        int serverdoll = CreateEntityByName("prop_ragdoll");
+        if(ragdoll != INVALID_ENT_REFERENCE)
+            AcceptEntityInput(ragdoll, "Kill");
+
+        DispatchKeyValue(serverdoll, "targetname", clientName);
+        DispatchKeyValue(serverdoll, "model", modelName);
+        DispatchKeyValue(serverdoll, "spawnflags", "4");
+        SetEntPropEnt(client, Prop_Send, "m_hRagdoll", serverdoll);
+        SetEntPropEnt(serverdoll, Prop_Send, "m_hOwnerEntity", client);
+        SetEntityModel(serverdoll, modelName);
+        DispatchSpawn(serverdoll);
+        TeleportEntity(serverdoll, pos, angles, NULL_VECTOR);
+        Ragdolls.Push(EntIndexToEntRef(serverdoll));
+    }
+    return Plugin_Continue;
+}
+
+public Action CMD_RespawnPlayer(int client, int args) {
+    if(args < 1)
+        return Plugin_Handled;
+
+    char sNickname[MAX_NAME_LENGTH];
+    GetCmdArgString(sNickname, sizeof(sNickname));
+    int target = FindTarget(client, sNickname);
+    if(target != -1 && IsValidClient(target)) {
+        CS_RespawnPlayer(target);
+        float fPos[3];
+        for(int i = 0; i < Ragdolls.Length; i++) {
+            int ragdoll = EntRefToEntIndex(Ragdolls.Get(i));
+            if(ragdoll != -1) {
+                int iClient = GetEntPropEnt(ragdoll, Prop_Send, "m_hOwnerEntity");
+                if(iClient == target) {
+                    GetEntPropVector(ragdoll, Prop_Send, "m_vecOrigin", fPos);
+                    TeleportEntity(iClient, fPos, NULL_VECTOR, NULL_VECTOR);
+                    break;
+                }
+            }
+        }
+        if(IsValidClient(client))
+            PrintToChat(client, "Zrespiono %N.", target);
+    }
+
+    return Plugin_Handled;
+}
+
+public Action OnPostThinkPost(int client) {
+//    SetEntProp(client, Prop_Send, "m_iAddonBits", 0);
+    int entity = EntRefToEntIndex(g_iGrabbed[client]);
+    if (entity != INVALID_ENT_REFERENCE) {
+        float vecView[3], vecFwd[3], vecPos[3], vecVel[3];
+
+        GetClientEyeAngles(client, vecView);
+        GetAngleVectors(vecView, vecFwd, NULL_VECTOR, NULL_VECTOR);
+        GetClientEyePosition(client, vecPos);
+
+        vecPos[0] += vecFwd[0] * GRAB_DISTANCE;
+        vecPos[1] += vecFwd[1] * GRAB_DISTANCE;
+        vecPos[2] += vecFwd[2] * GRAB_DISTANCE;
+
+        GetEntPropVector(entity, Prop_Send, "m_vecOrigin", vecFwd);
+        SubtractVectors(vecPos, vecFwd, vecVel);
+        char classname[PLATFORM_MAX_PATH];
+        GetEntityClassname(entity, classname, sizeof(classname));
+        if(StrEqual(classname, "prop_ragdoll", false)) {
+            ScaleVector(vecVel, 300.0);
+        }
+
+        TeleportEntity(entity, NULL_VECTOR, NULL_VECTOR, vecVel);
+    }
+}
+
+stock bool IsValidClient(int client) {
+    if(client > 0 && client <= MaxClients)
+    {
+        if(IsClientInGame(client))
+            return true;
+    }
+    return false;
+}
+
+stock void ResetVariables() {
+    for (int i = 1; i <= MaxClients; i++) {
+        g_iGrabbed[i] = INVALID_ENT_REFERENCE;
+    }
+}
+
+stock void GrabEntity(int client, int entity) {
+    g_iGrabbed[client] = EntIndexToEntRef(entity);
+}
+
+stock void ReleaseEntity(int client) {
+    g_iGrabbed[client] = INVALID_ENT_REFERENCE;
+}
+
+public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3], int &weapon, int &subtype, int &cmdnum, int &tickcount, int &seed, int mouse[2]) {
+
+    if(buttons & IN_USE && IsPlayerAlive(client) && !g_bIsHoldingE[client]) {
+        g_bIsHoldingE[client] = true;
+        int entity = GetClientAimTarget(client, false);
+        char classname[PLATFORM_MAX_PATH];
+        if(IsValidEntity(entity)) {
+            GetEntityClassname(entity, classname, sizeof(classname));
+            if(StrEqual(classname, "prop_ragdoll", false)) {
+                float entityPos[3], clientPos[3], distance;
+                GetEntPropVector(entity, Prop_Data, "m_vecOrigin", entityPos);
+                GetClientAbsOrigin(client, clientPos);
+                distance = GetVectorDistance(clientPos, entityPos);
+                if(distance < GRAB_DISTANCE) {
+                    SetEntPropEnt(entity, Prop_Data, "m_hPhysicsAttacker", client);
+                    AcceptEntityInput(entity, "EnableMotion");
+                    SetEntityMoveType(entity, MOVETYPE_VPHYSICS);
+                    GrabEntity(client, entity);
+                }
+            }
+        }
+    }
+    else {
+        if(g_bIsHoldingE[client])
+            ReleaseEntity(client);
+        g_bIsHoldingE[client] = false;
+    }
+}
+
+public void OnClientPutInServer(int client) {
+    SDKHook(client, SDKHook_PostThinkPost, OnPostThinkPost);
+}
+
+public void OnClientDisconnect(int client) {
+    g_iGrabbed[client] = INVALID_ENT_REFERENCE;
+}
