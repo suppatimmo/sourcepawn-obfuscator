@@ -125,8 +125,8 @@ public class NameSearcher {
             if (searchForNextName(codeToEncode, pattern + " ")) {
                 return true;
             } else {
-                String pattern2 =  pattern.concat("[]"); // there's a problem, i need to somehow escape [].... :(
-                if (searchForNextName(codeToEncode, pattern2)) {
+//                String pattern2 =  pattern.concat("[]"); // there's a problem, i need to somehow escape [].... :(
+                if (searchForNextName(codeToEncode, pattern)) {
                     return true;
                 }
             }
