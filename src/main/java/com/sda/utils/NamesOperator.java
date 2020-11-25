@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class NameSearcher {
+public class NamesOperator {
     CsvReader csvReader = new CsvReader();
     List<String> variablesAndFunctionsNames = new ArrayList<>();
     List<String> untouchableNames = csvReader.getUntouchableNamesList();
@@ -16,7 +16,7 @@ public class NameSearcher {
         return encodedCode;
     }
 
-    public List<String> getVariablesAndFunctionsNames(String textToEncode) throws IOException {
+    public List<String> findAndChangeAllVariablesAndFunctionNames(String textToEncode, int randomStringLength) throws IOException {
         this.codeToEncode = this.encodedCode = textToEncode;
         this.variablesAndFunctionsNames.clear();
 
@@ -25,9 +25,9 @@ public class NameSearcher {
                 // we need to replace all occurrences of variables/function names in given String, because we don't want to
                 // iterate by the same all the time.. moreover, we'll show only encoded code, so replace values now
                 this.codeToEncode = this.codeToEncode.replaceAll("\\b" + variablesAndFunctionsName + "\\b",
-                        stringRandomizer.generateString(6));
+                        stringRandomizer.generateString(randomStringLength));
                 this.encodedCode = this.encodedCode.replaceAll("\\b" + variablesAndFunctionsName + "\\b",
-                        stringRandomizer.generateString(6));
+                        stringRandomizer.generateString(randomStringLength));
                 this.variablesAndFunctionsNames.remove(variablesAndFunctionsName); // some optimization here.. i think
                 break;
             }
@@ -85,11 +85,12 @@ public class NameSearcher {
         return allNames;
     }
 
-
     private boolean searchForNextName(String codeToEncode, String pattern) throws IOException {
         // split codeToEncode by given pattern, as a way of searching for potential candidate to be a name of variable/function
-        String[] splittedByType = codeToEncode.split(pattern);
+        String[] splittedByType;
         String[] splittedByOperator;
+        splittedByType = codeToEncode.split(pattern);
+
         if (isStringName(splittedByType)) {
             if (isLineContainingOneName(splittedByType[1])) {
                 // thanks to Mike ♥.. I was stuck af splitting by \\[ :D
@@ -125,16 +126,12 @@ public class NameSearcher {
             if (searchForNextName(codeToEncode, pattern + " ")) {
                 return true;
             } else {
-//                String pattern2 =  pattern.concat("[]"); // there's a problem, i need to somehow escape [].... :(
-                if (searchForNextName(codeToEncode, pattern)) {
-                    return true;
-                }
             }
         }
         return false;
     }
 
     private boolean isNameAllowedToTranslate(String name) {
-        return !this.untouchableNames.contains(name);
+        return !this.untouchableNames.contains(name) && !name.isEmpty();
     }
 }

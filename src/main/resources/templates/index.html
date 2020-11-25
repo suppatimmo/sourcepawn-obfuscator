@@ -22,8 +22,12 @@
                                               id="codeToEncode"></textarea></p>
             </div>
             <div class="col-lg-2 text-center">
-                <p><input style="position:relative; top:10%" type="submit" value="Submit"/></p>
-                <p><input style="position:relative; top:10%" type="reset" value="Reset"/></p> <!--// js clearing needed -->
+                <p class="center-menu"><input type="checkbox" name="spaghettiCode"/>Spaghetti code</p>
+                <p class="center-menu"><input type="checkbox" name="randomizeVariables"/>Randomize variables names</p>
+                <p class="center-menu">Length of randomized variables names</p>
+                <input type="number" id="length" name="length" th:value="6" th:min="3" th:max="13">
+                <p class="center-menu"><input style="position:relative; top:10%" type="submit" value="Submit"/></p>
+                <p class="center-menu"><input style="position:relative; top:10%" type="reset" value="Reset"/></p> <!--// js clearing needed -->
             </div>
             <div class="col-lg-5">
                 <p> Encoded code: <textarea style="width: 100%; height:500px;" th:text="${encodedCode}" type="text" name="encodedCode"

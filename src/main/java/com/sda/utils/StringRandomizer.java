@@ -25,7 +25,7 @@ public class StringRandomizer {
                 + "abcdefghijklmnopqrstuvxyz";
 
         StringBuilder stringBuilder = new StringBuilder(lengthOfTheString); // here it is - StringBuilder as incoming hero
-        for (int i = 0; i < lengthOfTheString; i++) {
+        for (int i = 0; i < lengthOfTheString-1; i++) {
             // so basically we are generating a random number between 0 and length of String containing letters and numbers
             int index = (int) (alpaNumericString.length() * Math.random());
             // and just append randomized character using StringBuilder

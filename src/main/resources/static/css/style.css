@@ -185,6 +185,13 @@ ol {
 	width: 35vw;
 	height: 75vh;
 }
+.center-menu {
+	float: left;
+}
+
+.center-menu input {
+	margin-right: 5px;
+}
 .encode-btn {
 	width: 100%;
 	height:80px;

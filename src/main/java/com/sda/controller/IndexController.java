@@ -26,11 +26,27 @@ public class IndexController {
     }
 
     @PostMapping("/index")
-    public String afterConverting(@RequestParam(value="codeToEncode", required = false) String codeToEncode, Model model) throws IOException {
+    public String afterConverting(@RequestParam(value = "codeToEncode", required = false) String codeToEncode,
+                                  @RequestParam(value = "spaghettiCode", required = false) String spaghettiCode,
+                                  @RequestParam(value = "randomizeVariables", required = false) String randomizeVariables,
+                                  @RequestParam(value = "length", required = false) Integer randomStringsLength,
+                                  Model model) throws IOException {
         if (codeToEncode != null) {
-            String encodedCode = service.encode(codeToEncode);
+            String finalCode = codeToEncode;
+            if (randomizeVariables != null) {
+                if (randomStringsLength != null) {
+                    finalCode = service.encode(codeToEncode, randomStringsLength);
+                } else {
+                    finalCode = service.encode(codeToEncode, 6);
+                }
+
+            }
+
+            if (spaghettiCode != null) {
+                finalCode = service.convertCodeToSpaghetti(finalCode);
+            }
             model.addAttribute("codeToEncode", codeToEncode);
-            model.addAttribute("encodedCode", encodedCode);
+            model.addAttribute("encodedCode", finalCode);
         }
         return "index";
     }
