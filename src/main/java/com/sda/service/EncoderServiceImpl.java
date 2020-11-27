@@ -5,6 +5,7 @@ import com.sda.utils.NamesOperator;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -15,7 +16,22 @@ public class EncoderServiceImpl implements EncoderService {
 
     @Override
     public String encode(String textToConvert, int randomStringsLength) throws IOException {
-        String encodedCode = textToConvert;
+//        namesOperator.setCode(textToConvert);
+//        List<String> variableNames;
+//        List<String> functionNames;
+//
+//        variableNames = namesOperator.getAllVariableNames;
+//        functionNames = namesOperator.getAllFunctionNames;
+//
+//        variableNames.addAll(functionNames);
+//        renameAllNamesToRandomStrings(variableNames);
+
+
+        // 1.list - get all variable names
+        // 2.list - get all functions names
+        // 3.concat 2 lists
+        // 4.rename all to random strings
+
         List<String> allNames = namesOperator.findAndChangeAllVariablesAndFunctionNames(textToConvert, randomStringsLength);
         return namesOperator.getCode();
 //        List typesList = csvReader.getTypesList();

@@ -11,23 +11,30 @@ public class NamesOperator {
     StringRandomizer stringRandomizer = new StringRandomizer();
     String codeToEncode;
     String encodedCode;
+    int generatedStringLength;
 
     public String getCode() {
         return encodedCode;
     }
 
+    public void setCode(String codeToEncode) {
+        this.codeToEncode = codeToEncode;
+    }
+
     public List<String> findAndChangeAllVariablesAndFunctionNames(String textToEncode, int randomStringLength) throws IOException {
         this.codeToEncode = this.encodedCode = textToEncode;
         this.variablesAndFunctionsNames.clear();
+        this.generatedStringLength = randomStringLength;
 
         while (isMoreVariablesToTranslate(this.codeToEncode)) {
             for (String variablesAndFunctionsName : this.variablesAndFunctionsNames) {
                 // we need to replace all occurrences of variables/function names in given String, because we don't want to
                 // iterate by the same all the time.. moreover, we'll show only encoded code, so replace values now
                 this.codeToEncode = this.codeToEncode.replaceAll("\\b" + variablesAndFunctionsName + "\\b",
-                        stringRandomizer.generateString(randomStringLength));
+                        stringRandomizer.generateString(generatedStringLength));
+
                 this.encodedCode = this.encodedCode.replaceAll("\\b" + variablesAndFunctionsName + "\\b",
-                        stringRandomizer.generateString(randomStringLength));
+                        stringRandomizer.generateString(generatedStringLength));
                 this.variablesAndFunctionsNames.remove(variablesAndFunctionsName); // some optimization here.. i think
                 break;
             }
@@ -35,7 +42,7 @@ public class NamesOperator {
         return variablesAndFunctionsNames;
     }
 
-    private boolean isStringName(String[] line) {
+    private boolean isStringArrayContainingName(String[] line) {
         // if length of given array is greater or equals 2, then we have to deal with name inside it
         return line.length >= 2;
     }
@@ -61,12 +68,25 @@ public class NamesOperator {
         return false;
     }
 
+    /*
+    fuck, try this:
+    bool SavePlayerSigil(int client, int sigilID, int sigilPower = 0, bool sigilStatus = false, bool hasSigil = true) {
+     */
+    private void renameAndReplaceTypeOrClass(String line) {
+        for (int i = 0; i < csvReader.getTypesList().size(); i++) {
+            if (line.contains(csvReader.getTypesList().get(i))) {
+
+            }
+        }
+    }
+
     private List<String> getAllNamesFromComplexLine(String complexLine) {
         List<String> allNames = new ArrayList<>();
-        String[] splittedLine = new String[0];
+        String[] splittedLine;
         // split for every possible name inside complex line
-        splittedLine = complexLine.split("[;]");
+        splittedLine = complexLine.split("[;{]");
         splittedLine = splittedLine[0].split("[,]");
+
         for (int i = 0; i < splittedLine.length; i++) {
             splittedLine[i] = splittedLine[i].trim();
             if (splittedLine[i].contains("[")) {
@@ -85,16 +105,36 @@ public class NamesOperator {
         return allNames;
     }
 
-    private boolean searchForNextName(String codeToEncode, String pattern) throws IOException {
-        // split codeToEncode by given pattern, as a way of searching for potential candidate to be a name of variable/function
-        String[] splittedByType;
-        String[] splittedByOperator;
-        splittedByType = codeToEncode.split(pattern);
 
-        if (isStringName(splittedByType)) {
+    /* TESTING GETTING FUNCTION NAMES
+//    public boolean isFunctionName(String line) {
+//        // if there is not any (, then it can't be a function name..
+//        if (!line.contains("(")) {
+//            return false;
+//        }
+//
+//        // for example : public void Example(int something, char[] something2) { };
+//        if (line.indexOf('(') < line.indexOf(',') || line.indexOf(',') == -1) {
+//            return true;
+//        }
+//        return false;
+//    }
+//    private boolean searchForArraysNames(String codeToEncode, String pattern) {
+//        String[] splittedByPattern = codeToEncode.split(pattern);
+//        if (splittedByPattern.length > 1) {
+//            System.out.println(splittedByPattern[1].trim()); // got it?!
+//        }
+//        return false;
+//    }
+ */
+    private boolean searchForNextName(String codeToEncode, String pattern) {
+        // split codeToEncode by given pattern, as a way of searching for potential candidate to be a name of variable/function
+        String[] splittedByType = codeToEncode.split(pattern);
+
+        if (isStringArrayContainingName(splittedByType)) {
             if (isLineContainingOneName(splittedByType[1])) {
                 // thanks to Mike ♥.. I was stuck af splitting by \\[ :D
-                splittedByOperator = splittedByType[1].split("[\r\\[,(;= ]");
+                String[] splittedByOperator = splittedByType[1].split("[\r\\[,(;= ]");
                 // we need to make sure that someone just didn't pasted something wrong to encode..
 
                 splittedByOperator[0] = splittedByOperator[0].replaceAll("[^a-zA-Z0-9_-]", "");
@@ -125,8 +165,10 @@ public class NamesOperator {
             String pattern = csvReader.getTypesList().get(i);
             if (searchForNextName(codeToEncode, pattern + " ")) {
                 return true;
-            } else {
             }
+//            else {
+//                searchForArraysNames(codeToEncode, pattern);
+//            }
         }
         return false;
     }
