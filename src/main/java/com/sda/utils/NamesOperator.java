@@ -21,33 +21,12 @@ public class NamesOperator {
         this.codeToEncode = codeToEncode;
     }
 
-    public List<String> findAndChangeAllVariablesAndFunctionNames(String textToEncode, int randomStringLength) throws IOException {
-        this.codeToEncode = this.encodedCode = textToEncode;
-        this.variablesAndFunctionsNames.clear();
-        this.generatedStringLength = randomStringLength;
-
-        while (isMoreVariablesToTranslate(this.codeToEncode)) {
-            for (String variablesAndFunctionsName : this.variablesAndFunctionsNames) {
-                // we need to replace all occurrences of variables/function names in given String, because we don't want to
-                // iterate by the same all the time.. moreover, we'll show only encoded code, so replace values now
-                this.codeToEncode = this.codeToEncode.replaceAll("\\b" + variablesAndFunctionsName + "\\b",
-                        stringRandomizer.generateString(generatedStringLength));
-
-                this.encodedCode = this.encodedCode.replaceAll("\\b" + variablesAndFunctionsName + "\\b",
-                        stringRandomizer.generateString(generatedStringLength));
-                this.variablesAndFunctionsNames.remove(variablesAndFunctionsName); // some optimization here.. i think
-                break;
-            }
-        }
-        return variablesAndFunctionsNames;
-    }
-
-    private boolean isStringArrayContainingName(String[] line) {
+    private boolean isStringArrayContainingAnyName(String[] line) {
         // if length of given array is greater or equals 2, then we have to deal with name inside it
         return line.length >= 2;
     }
 
-    private boolean isLineContainingOneName(String line) {
+    private boolean isStringContainingOneName(String line) {
         String separatedLine[] = line.split("[;\\r]");
 
         // if line don't have "," inside - its simply one name of variable here
@@ -68,10 +47,6 @@ public class NamesOperator {
         return false;
     }
 
-    /*
-    fuck, try this:
-    bool SavePlayerSigil(int client, int sigilID, int sigilPower = 0, bool sigilStatus = false, bool hasSigil = true) {
-     */
     private void renameAndReplaceTypeOrClass(String line) {
         for (int i = 0; i < csvReader.getTypesList().size(); i++) {
             if (line.contains(csvReader.getTypesList().get(i))) {
@@ -105,57 +80,22 @@ public class NamesOperator {
         return allNames;
     }
 
+    private boolean isFunctionInsideString(String line) {
+        // if there is not any (, then it can't be a function name..
+        if (!line.contains("(")) {
+            return false;
+        }
 
-    /* TESTING GETTING FUNCTION NAMES
-//    public boolean isFunctionName(String line) {
-//        // if there is not any (, then it can't be a function name..
-//        if (!line.contains("(")) {
-//            return false;
-//        }
-//
-//        // for example : public void Example(int something, char[] something2) { };
-//        if (line.indexOf('(') < line.indexOf(',') || line.indexOf(',') == -1) {
-//            return true;
-//        }
-//        return false;
-//    }
-//    private boolean searchForArraysNames(String codeToEncode, String pattern) {
-//        String[] splittedByPattern = codeToEncode.split(pattern);
-//        if (splittedByPattern.length > 1) {
-//            System.out.println(splittedByPattern[1].trim()); // got it?!
-//        }
-//        return false;
-//    }
- */
-    private boolean searchForNextName(String codeToEncode, String pattern) {
-        // split codeToEncode by given pattern, as a way of searching for potential candidate to be a name of variable/function
-        String[] splittedByType = codeToEncode.split(pattern);
-
-        if (isStringArrayContainingName(splittedByType)) {
-            if (isLineContainingOneName(splittedByType[1])) {
-                // thanks to Mike ♥.. I was stuck af splitting by \\[ :D
-                String[] splittedByOperator = splittedByType[1].split("[\r\\[,(;= ]");
-                // we need to make sure that someone just didn't pasted something wrong to encode..
-
-                splittedByOperator[0] = splittedByOperator[0].replaceAll("[^a-zA-Z0-9_-]", "");
-                splittedByOperator[0] = splittedByOperator[0].trim();
-                if (isNameAllowedToTranslate(splittedByOperator[0])) {
-                    variablesAndFunctionsNames.add(splittedByOperator[0]);
-                    this.codeToEncode = this.codeToEncode.replaceFirst(pattern, stringRandomizer.generateString(7) + " ");
-                    return true;
-                }
-            } else {
-                List<String> allNamesFromComplexLine = getAllNamesFromComplexLine(splittedByType[1]);
-                for (String s : allNamesFromComplexLine) {
-                    if (isNameAllowedToTranslate(s)) {
-                        variablesAndFunctionsNames.add(s);
-                    }
-                }
-                this.codeToEncode = this.codeToEncode.replaceFirst(pattern, stringRandomizer.generateString(7) + " ");
-                return true;
-            }
+        // for example : public void Example(int something, char[] something2) { };
+        if (line.indexOf('(') < line.indexOf(',') || line.indexOf(',') == -1) {
+            return true;
         }
         return false;
+    }
+
+    private String getFunctionName(String line) {
+        String[] functionName = line.split("\\(");
+        return functionName[0];
     }
 
     private boolean isMoreVariablesToTranslate(String codeToEncode) throws IOException {
@@ -175,5 +115,63 @@ public class NamesOperator {
 
     private boolean isNameAllowedToTranslate(String name) {
         return !this.untouchableNames.contains(name) && !name.isEmpty();
+    }
+
+    public List<String> findAndChangeAllVariablesAndFunctionNames(String textToEncode, int randomStringLength) throws IOException {
+        this.codeToEncode = this.encodedCode = textToEncode;
+        this.variablesAndFunctionsNames.clear();
+        this.generatedStringLength = randomStringLength;
+
+        while (isMoreVariablesToTranslate(this.codeToEncode)) {
+            for (String variablesAndFunctionsName : this.variablesAndFunctionsNames) {
+                // we need to replace all occurrences of variables/function names in given String, because we don't want to
+                // iterate by the same all the time.. moreover, we'll show only encoded code, so replace values now
+                this.codeToEncode = this.codeToEncode.replaceAll("\\b" + variablesAndFunctionsName + "\\b",
+                        stringRandomizer.generateString(generatedStringLength));
+
+                this.encodedCode = this.encodedCode.replaceAll("\\b" + variablesAndFunctionsName + "\\b",
+                        stringRandomizer.generateString(generatedStringLength));
+                this.variablesAndFunctionsNames.remove(variablesAndFunctionsName); // some optimization here.. i think
+                break;
+            }
+        }
+        return variablesAndFunctionsNames;
+    }
+
+    private boolean searchForNextName(String codeToEncode, String pattern) {
+        // split codeToEncode by given pattern, as a way of searching for potential candidate to be a name of variable/function
+        String[] splittedByType = codeToEncode.split(pattern);
+
+        if (isStringArrayContainingAnyName(splittedByType)) {
+            if (isStringContainingOneName(splittedByType[1])) {
+                // thanks to Mike ♥.. I was stuck af splitting by \\[ :D
+                String[] splittedByOperator = splittedByType[1].split("[\r\\[,(;= ]");
+                // we need to make sure that someone just didn't pasted something wrong to encode..
+
+                splittedByOperator[0] = splittedByOperator[0].replaceAll("[^a-zA-Z0-9_-]", "");
+                splittedByOperator[0] = splittedByOperator[0].trim();
+                if (isNameAllowedToTranslate(splittedByOperator[0])) {
+                    variablesAndFunctionsNames.add(splittedByOperator[0]);
+                    this.codeToEncode = this.codeToEncode.replaceFirst(pattern, stringRandomizer.generateString(7) + " ");
+                    return true;
+                }
+            } else {
+                if (isFunctionInsideString(splittedByType[1])) {
+                    String functionName = getFunctionName(splittedByType[1]);
+                    if (isNameAllowedToTranslate(functionName))
+                        variablesAndFunctionsNames.add(functionName);
+                } else {
+                    List<String> collectedNames = getAllNamesFromComplexLine(splittedByType[1]);
+                    for (String s : collectedNames) {
+                        if (isNameAllowedToTranslate(s)) {
+                            variablesAndFunctionsNames.add(s);
+                        }
+                    }
+                }
+                this.codeToEncode = this.codeToEncode.replaceFirst(pattern, stringRandomizer.generateString(7) + " ");
+                return true;
+            }
+        }
+        return false;
     }
 }
