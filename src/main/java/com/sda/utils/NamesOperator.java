@@ -1,8 +1,12 @@
 package com.sda.utils;
 
+import org.springframework.core.type.filter.RegexPatternTypeFilter;
+
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 public class NamesOperator {
     CsvReader csvReader = new CsvReader();
@@ -39,6 +43,12 @@ public class NamesOperator {
             return separatedLine[0].indexOf(',') > separatedLine[0].indexOf('=');
         }
 
+        // if there is not any 'bool', 'char', 'int' etc anymore
+        // example: "name, char[32] name2) {" - that's we need to check here
+        if (isDeclarationInsideString(separatedLine[0])) {
+            return false;
+        }
+
         // then finally, if there's ";", we must have to deal with complex line of code
         if (!separatedLine[0].contains(";"))
             return true;
@@ -47,12 +57,16 @@ public class NamesOperator {
         return false;
     }
 
-    private void renameAndReplaceTypeOrClass(String line) {
+    private boolean isDeclarationInsideString(String line) {
+        String pattern;
         for (int i = 0; i < csvReader.getTypesList().size(); i++) {
-            if (line.contains(csvReader.getTypesList().get(i))) {
-
-            }
+            pattern = "\\b" + csvReader.getTypesList().get(i) + "\\b";
+            Pattern p = Pattern.compile(pattern);
+            Matcher m = p.matcher(line);
+            if (m.find())
+                return true;
         }
+        return false;
     }
 
     private List<String> getAllNamesFromComplexLine(String complexLine) {
@@ -87,6 +101,7 @@ public class NamesOperator {
         }
 
         // for example : public void Example(int something, char[] something2) { };
+        System.out.println(line.indexOf('(') + "  " + line.indexOf(','));
         if (line.indexOf('(') < line.indexOf(',') || line.indexOf(',') == -1) {
             return true;
         }
@@ -107,7 +122,7 @@ public class NamesOperator {
                 return true;
             }
 //            else {
-//                searchForArraysNames(codeToEncode, pattern);
+//                searchForNextName(codeToEncode, pattern + "\\[\\]");
 //            }
         }
         return false;
@@ -155,22 +170,38 @@ public class NamesOperator {
                     this.codeToEncode = this.codeToEncode.replaceFirst(pattern, stringRandomizer.generateString(7) + " ");
                     return true;
                 }
-            } else {
-                if (isFunctionInsideString(splittedByType[1])) {
-                    String functionName = getFunctionName(splittedByType[1]);
-                    if (isNameAllowedToTranslate(functionName))
-                        variablesAndFunctionsNames.add(functionName);
+            } else if (isFunctionInsideString(splittedByType[1])) {
+                // first, if its a function - get a name, then deal with args
+                String functionName = getFunctionName(splittedByType[1]);
+                if (isNameAllowedToTranslate(functionName))
+                    variablesAndFunctionsNames.add(functionName);
+
+                if (doesFunctionHaveArguments(splittedByType[1])) {
+
                 } else {
-                    List<String> collectedNames = getAllNamesFromComplexLine(splittedByType[1]);
-                    for (String s : collectedNames) {
-                        if (isNameAllowedToTranslate(s)) {
-                            variablesAndFunctionsNames.add(s);
-                        }
+
+                }
+            } else if (isDeclarationInsideString(splittedByType[1])) {
+
+            } else {
+                List<String> collectedNames = getAllNamesFromComplexLine(splittedByType[1]);
+                for (String s : collectedNames) {
+                    if (isNameAllowedToTranslate(s)) {
+                        variablesAndFunctionsNames.add(s);
                     }
                 }
-                this.codeToEncode = this.codeToEncode.replaceFirst(pattern, stringRandomizer.generateString(7) + " ");
-                return true;
             }
+            this.codeToEncode = this.codeToEncode.replaceFirst(pattern, stringRandomizer.generateString(7) + " ");
+        } else {
+            return false;
+        }
+        return true;
+    }
+
+    public boolean doesFunctionHaveArguments(String line) {
+        System.out.println(line.indexOf(')') + "   " + line.indexOf('('));
+        if (line.indexOf(')') != line.indexOf('(') + 1) {
+            return true;
         }
         return false;
     }
